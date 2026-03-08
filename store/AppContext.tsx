@@ -924,10 +924,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    fetchInitialData(true);
-  }, [fetchInitialData]);
-
-  useEffect(() => {
     if (!isSupabaseReady || !supabase) return;
 
     const getSession = async () => {
