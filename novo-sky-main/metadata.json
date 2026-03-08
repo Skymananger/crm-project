@@ -1,0 +1,8 @@
+{
+  "name": "Sky Distribuidora Manager atual",
+  "description": "A comprehensive ERP and CRM system for kitchenware distributors with AI-powered marketing and sales tools.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}

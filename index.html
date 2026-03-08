@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#003459" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Sky Manager" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23003459%22/><text y=%22.75em%22 x=%225%22 font-size=%2280%22>⭐</text></svg>">
+    <title>Sky Distribuidora Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Carrega o Google Maps se houver uma chave salva
+      (function() {
+        const key = localStorage.getItem('sky_google_maps_key');
+        if (key) {
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+          script.async = true;
+          script.defer = true;
+          document.head.appendChild(script);
+        }
+      })();
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@100;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⭐</text></svg>">
+    <style>
+      :root {
+        --sky-blue: #00A8E8;
+        --deep-blue: #003459;
+        --accent-blue: #007AFF;
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.3);
+      }
+      body { 
+        font-family: 'Outfit', 'Inter', sans-serif; 
+        background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%);
+        margin: 0; 
+        overscroll-behavior-y: contain;
+        -webkit-tap-highlight-color: transparent;
+        padding-top: env(safe-area-inset-top);
+        min-height: 100vh;
+      }
+      #root { min-height: 100vh; }
+      #initial-loader {
+        position: fixed; 
+        inset: 0; 
+        display: flex; 
+        flex-direction: column;
+        align-items: center; 
+        justify-content: center; 
+        background: radial-gradient(circle at center, #003459 0%, #001A2D 100%); 
+        color: white; 
+        z-index: 9999;
+        transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .loader-container {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .spinner-outer {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border: 2px solid rgba(255,255,255,0.05);
+        border-top: 2px solid var(--sky-blue);
+        border-radius: 50%;
+        animation: spin 2s linear infinite;
+      }
+      .spinner-inner {
+        position: absolute;
+        width: 70%;
+        height: 70%;
+        border: 2px solid rgba(255,255,255,0.05);
+        border-bottom: 2px solid #fff;
+        border-radius: 50%;
+        animation: spin-reverse 1.5s linear infinite;
+      }
+      .loader-logo {
+        font-size: 40px;
+        animation: pulse-logo 2s ease-in-out infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes spin-reverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+      @keyframes pulse-logo {
+        0%, 100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 0px var(--sky-blue)); }
+        50% { transform: scale(1.1); opacity: 0.8; filter: drop-shadow(0 0 15px var(--sky-blue)); }
+      }
+      #error-display { display: none; padding: 20px; background: #fee2e2; border: 2px solid #ef4444; color: #b91c1c; border-radius: 12px; margin: 20px; font-family: monospace; z-index: 10000; position: relative; }
+      
+      .glass-effect {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+      }
+
+      @media (max-width: 640px) {
+        .mobile-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+      }
+    </style>
+  </head>
+  <body class="mobile-safe-bottom">
+    <div id="error-display"></div>
+    <div id="initial-loader">
+      <div class="loader-container">
+        <div class="spinner-outer"></div>
+        <div class="spinner-inner"></div>
+        <div class="loader-logo">⭐</div>
+      </div>
+      <p style="margin-top:24px; font-weight:900; letter-spacing: 4px; font-family: 'Outfit';">SKY MANAGER</p>
+      <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; opacity: 0.5;">
+        <span style="width: 4px; height: 4px; background: var(--sky-blue); border-radius: 50%;"></span>
+        <p style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Antigravity Design Engine</p>
+        <span style="width: 4px; height: 4px; background: var(--sky-blue); border-radius: 50%;"></span>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script>
+      // Debug de variáveis de ambiente
+      console.log("SKY MANAGER: Verificando conexão...");
+      if (!window.process) window.process = { env: {} };
+    </script>
+    <script type="module" src="/index.tsx"></script>
+    <script>
+      // Fix para manter o WebApp em tela cheia no iOS ao clicar em links internos
+      (function(a,b,c){if(c in b&&b[c]){var d,e=a.location,f=/^(a|html)$/i;a.addEventListener("click",function(a){d=a.target;while(!f.test(d.nodeName))d=d.parentNode;"href"in d&&(d.href.indexOf("http")||~d.href.indexOf(e.host))&&(a.preventDefault(),e.href=d.href)},!1)}})(document,window.navigator,"standalone")
+    </script>
+  </body>
+</html>
