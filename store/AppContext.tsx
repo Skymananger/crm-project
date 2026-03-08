@@ -928,10 +928,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [fetchInitialData]);
 
   useEffect(() => {
+    if (!isSupabaseReady || !supabase) return;
+
     const getSession = async () => {
-      const { data: { session } } = await supabase!.auth.getSession();
-      console.log('SKY MANAGER: Sessão inicial:', session?.user?.email);
-      setSession(session);
+      try {
+        const { data: { session } } = await supabase!.auth.getSession();
+        console.log('SKY MANAGER: Sessão inicial:', session?.user?.email);
+        setSession(session);
+      } catch (e) {
+        console.warn("SKY MANAGER: Erro ao buscar sessão inicial:", e);
+      }
     }
     getSession();
 
@@ -940,7 +946,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSession(session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
