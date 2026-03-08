@@ -500,15 +500,18 @@ const Dashboard: React.FC = () => {
           <div className="relative max-w-2xl mx-auto py-10 pt-20">
             {newFunnel.map((item, i) => {
               const baseWidth = 100 - (i * 12);
-              const nextWidth = 100 - ((i + 1) * 12);
+              const isLast = i === newFunnel.length - 1;
               return (
-                <div key={i} className="relative group mb-1 last:mb-0">
+                <div key={i} className="relative group mb-2 last:mb-0">
                   <div 
-                    className="h-20 bg-gradient-to-br from-blue-500 to-indigo-700 shadow-lg transition-all duration-500 hover:brightness-110 flex items-center justify-center relative overflow-hidden"
+                    className="h-24 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 shadow-xl transition-all duration-500 hover:brightness-110 flex items-center justify-center relative overflow-hidden"
                     style={{ 
                       width: `${baseWidth}%`, 
                       margin: '0 auto',
-                      clipPath: `polygon(0% 0%, 100% 0%, ${(100 - (nextWidth/baseWidth * 100))/2}% 100%, ${100 - (100 - (nextWidth/baseWidth * 100))/2}% 100%)`
+                      clipPath: isLast 
+                        ? `polygon(0% 0%, 100% 0%, 50% 100%)`
+                        : `polygon(${(100 - (100 * (100 - (i * 4)) / 100))/2}% 0%, ${100 - (100 - (100 * (100 - (i * 4)) / 100))/2}% 0%, ${100 - (100 - (100 * (100 - (i+1) * 4) / 100))/2}% 100%, ${(100 - (100 * (100 - (i+1) * 4) / 100))/2}% 100%)`,
+                      borderRadius: isLast ? '0 0 50% 50%' : '0'
                     }}
                   >
                     <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -522,10 +525,16 @@ const Dashboard: React.FC = () => {
                   
                   {/* Label flutuante */}
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-[110%] w-32 md:w-48 text-left hidden md:block">
-                    <p className="text-xs font-black text-[#003459] mb-0.5">R$ {item.value.toLocaleString('pt-BR')}</p>
-                    {i > 0 && (
-                      <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Conv: {item.conv.toFixed(0)}%</p>
-                    )}
+                    <div className="bg-white/40 backdrop-blur-md p-3 rounded-2xl border border-white/40 shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-0.5">Potencial</p>
+                      <p className="text-sm font-black text-[#003459]">R$ {item.value.toLocaleString('pt-BR')}</p>
+                      {i > 0 && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <TrendingUp size={10} className="text-green-500" />
+                          <p className="text-[9px] font-black text-green-600 uppercase tracking-widest">Conv: {item.conv.toFixed(0)}%</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
