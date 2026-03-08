@@ -18,11 +18,15 @@ const Auth: React.FC = () => {
     setMessage(null);
 
     try {
+      if (!supabase) {
+        throw new Error('O sistema não está conectado ao banco de dados. Configure as chaves no Vercel.');
+      }
+      
       if (isLogin) {
-        const { error } = await supabase!.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
-        const { error } = await supabase!.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         setMessage('Cadastro realizado! Verifique seu e-mail para confirmar a conta.');
       }

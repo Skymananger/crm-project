@@ -924,7 +924,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    if (!isSupabaseReady || !supabase) return;
+    if (!isSupabaseReady || !supabase) {
+      setLoading(false);
+      return;
+    }
 
     const getSession = async () => {
       try {
@@ -933,6 +936,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSession(session);
       } catch (e) {
         console.warn("SKY MANAGER: Erro ao buscar sessão inicial:", e);
+      } finally {
+        setLoading(false);
       }
     }
     getSession();
@@ -946,6 +951,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (subscription) subscription.unsubscribe();
     };
   }, []);
+
+  // Fallback para o loader caso tudo acima falhe ou o Supabase demore demais
+  useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        console.log("SKY MANAGER: Timeout do Loader acionado.");
+        setLoading(false);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
 
   useEffect(() => {
     if (!isSupabaseReady || !supabase) return;
