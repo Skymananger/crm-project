@@ -149,9 +149,10 @@ const mapDBToLead = (l: any): Lead => {
 
   // Normalizar estágios antigos para os novos nomes usados nos pipelines
   let normalizedStage = stage;
-  if (stageLower === 'clientes dign') normalizedStage = 'Clientes Digno';
-  if (stageLower === 'clientes million' || stageLower === 'clientes million (importados)') normalizedStage = 'Clientes Milionário';
-  if (stageLower === 'produtos') normalizedStage = 'Clientes Sky';
+  const sLower = stageLower.trim();
+  if (sLower === 'clientes dign' || sLower === 'clientes digne') normalizedStage = CustomerPipelineStage.CLIENTES_DIGN;
+  if (sLower === 'clientes million' || sLower === 'clientes million (importados)' || sLower === 'clientes millionario') normalizedStage = CustomerPipelineStage.CLIENTES_MILLION;
+  if (sLower === 'produtos' || sLower === 'clientes sky') normalizedStage = CustomerPipelineStage.CLIENTES_SKY;
 
   return {
     id: l.id,
@@ -160,13 +161,13 @@ const mapDBToLead = (l: any): Lead => {
     prospectPhone: l.prospect_phone,
     prospectCity: l.prospect_city,
     prospectAddress: '', 
-    prospectNotes: l.prospect_notes,
-    stage: normalizedStage as PipelineStage,
-    productInterest: l.product_interest,
+    prospectNotes: l.prospect_notes || '',
+    stage: normalizedStage as any,
+    productInterest: l.product_interest || '',
     estimatedValue: Number(l.estimated_value) || 0,
     lastInteraction: l.updated_at || new Date().toISOString(),
-    nextContactDate: l.next_contact_date,
-    nextActionDescription: '', 
+    nextContactDate: l.next_contact_date || '',
+    nextActionDescription: (l.prospect_notes || '').match(/\[Próxima Ação: (.*?)\]/)?.[1] || '', 
     pipelineType: inferredType as any,
     assignedTo: 'admin', 
     referredBy: undefined
@@ -400,9 +401,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Migração de estágios para pipelines simplificados (Uma única coluna por pipeline)
   // Removido para evitar movimentação automática de leads
   React.useEffect(() => {
-    // A lógica de importação automática foi removida a pedido do usuário.
-    // Agora o usuário tem botões manuais na interface para limpar e importar.
-  }, [loading]);
+    // Migração de nomes de estágios para manter compatibilidade com import/dashboard
+    const fixOrder = (order: string[], canonical: string) => {
+      if (order.length > 0) {
+        const first = order[0].toLowerCase();
+        if ((first.includes('million') || first.includes('milionario')) && order[0] !== canonical) {
+           const newOrder = [canonical, ...order.slice(1)];
+           return newOrder;
+        }
+      }
+      return null;
+    };
+
+    const newMillion = fixOrder(millionPipelineOrder, CustomerPipelineStage.CLIENTES_MILLION);
+    if (newMillion) setMillionPipelineOrder(newMillion);
+
+    const newSky = fixOrder(skyPipelineOrder, CustomerPipelineStage.CLIENTES_SKY);
+    if (newSky) setSkyPipelineOrder(newSky);
+
+    const newDign = fixOrder(dignPipelineOrder, CustomerPipelineStage.CLIENTES_DIGN);
+    if (newDign) setDignPipelineOrder(newDign);
+
+    // Também corrigir leads em memória
+    const hasTypoLeads = leads.some(l => l.stage.toLowerCase().includes('million') && l.stage !== CustomerPipelineStage.CLIENTES_MILLION);
+    if (hasTypoLeads) {
+      setLeads(prev => prev.map(l => {
+        if (l.stage.toLowerCase().includes('million') && l.stage !== CustomerPipelineStage.CLIENTES_MILLION) {
+          return { ...l, stage: CustomerPipelineStage.CLIENTES_MILLION };
+        }
+        return l;
+      }));
+    }
+  }, [leads.length, millionPipelineOrder, skyPipelineOrder, dignPipelineOrder]);
 
   React.useEffect(() => {
     // Atualiza contador de pendências
@@ -603,6 +633,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLastSaved(now);
     saveLocal('sky_last_saved', now);
     setSaving(true);
+    
+    // Auto-Internal Backup (History)
+    try {
+      const history = JSON.parse(localStorage.getItem('sky_backup_history') || '[]');
+      const currentData = {
+        sky_customers: localStorage.getItem('sky_customers'),
+        sky_leads: localStorage.getItem('sky_leads'),
+        sky_products: localStorage.getItem('sky_products'),
+        sky_orders: localStorage.getItem('sky_orders'),
+        sky_team: localStorage.getItem('sky_team'),
+        sky_appointments: localStorage.getItem('sky_appointments'),
+        timestamp: now
+      };
+      
+      const updatedHistory = [currentData, ...history].slice(0, 5); // Keep last 5
+      localStorage.setItem('sky_backup_history', JSON.stringify(updatedHistory));
+    } catch (e) {
+      console.warn("Falha ao gerar histórico local:", e);
+    }
+
     setTimeout(() => setSaving(false), 1000);
   }, []);
 
@@ -625,13 +675,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       lastSyncedSettingsRef.current = currentString;
       
-      await supabase.from('app_settings').upsert({ 
+      const { error } = await supabase.from('app_settings').upsert({ 
         id: 'global', 
         ...settingsData,
         updated_at: new Date().toISOString()
       });
+
+      if (error) {
+        console.warn("Sincronização de configurações falhou (provavelmente colunas ausentes):", error.message);
+      }
     } catch (e) {
-      console.warn("Sincronização de configurações não disponível no banco de dados.");
+      console.warn("Erro ao tentar sincronizar configurações:", e);
     }
   }, [userProfile, machineFees, pipelineOrder]);
 
@@ -663,16 +717,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     try {
+      const safeFetch = async (query: any) => {
+        try {
+          const res = await query;
+          if (res.error) console.warn("Supabase Fetch Warn:", res.error);
+          return res;
+        } catch (e) {
+          console.error("Supabase Fetch Error:", e);
+          return { data: null, error: e };
+        }
+      };
+
       const results = await Promise.all([
-        supabase.from('customers').select('*'),
-        supabase.from('leads').select('*'),
-        supabase.from('products').select('*'),
-        supabase.from('inventory').select('*'),
-        supabase.from('orders').select('*'),
-        supabase.from('team').select('*'),
-        supabase.from('appointments').select('*'),
-        supabase.from('programs_414').select('*'),
-        supabase.from('app_settings').select('*').eq('id', 'global').single()
+        safeFetch(supabase.from('customers').select('*')),
+        safeFetch(supabase.from('leads').select('*')),
+        safeFetch(supabase.from('products').select('*')),
+        safeFetch(supabase.from('inventory').select('*')),
+        safeFetch(supabase.from('orders').select('*')),
+        safeFetch(supabase.from('team').select('*')),
+        safeFetch(supabase.from('appointments').select('*')),
+        safeFetch(supabase.from('programs_414').select('*')),
+        safeFetch(supabase.from('app_settings').select('*').eq('id', 'global').single())
       ]);
 
       const [cust, lea, prod, inv, ord, tea, appt, prog, sett] = results;
@@ -707,12 +772,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Estratégia de Merge: Mantém o que é local e ainda não subiu, e atualiza com o que está na nuvem
       // Deduplicação: Se um item local (temp) tem o mesmo nome/telefone que um item da nuvem, assume que é o mesmo
       if (cust.data) {
-        const mapped = cust.data.map(mapDBToCustomer).filter(c => !(deletedItems.customers || []).includes(c.id));
-        setCustomers(prev => {
-          const cloudIds = new Set(mapped.map(c => c.id));
-          const cloudNames = new Set(mapped.map(c => `${c.name}|${c.phone}`));
+        const mapped = (cust.data as any[]).map(mapDBToCustomer).filter((c: Customer) => !(deletedItems.customers || []).includes(c.id));
+        setCustomers((prev: Customer[]) => {
+          const cloudIds = new Set(mapped.map((c: Customer) => c.id));
+          const cloudNames = new Set(mapped.map((c: Customer) => `${c.name}|${c.phone}`));
           
-          const localOnly = prev.filter(c => {
+          const localOnly = prev.filter((c: Customer) => {
             if (cloudIds.has(c.id)) return false;
             if (isTemp(c.id) && cloudNames.has(`${c.name}|${c.phone}`)) return false;
             return true;
@@ -725,12 +790,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       
       if (lea.data) {
-        const mappedCloudLeads = lea.data.map(mapDBToLead).filter(l => !(deletedItems.leads || []).includes(l.id));
-        setLeads(prev => {
-          const cloudIds = new Set(mappedCloudLeads.map(l => l.id));
-          const cloudNames = new Set(mappedCloudLeads.map(l => `${l.prospectName}|${l.prospectPhone}`));
+        const mappedCloudLeads = (lea.data as any[]).map(mapDBToLead).filter((l: Lead) => !(deletedItems.leads || []).includes(l.id));
+        setLeads((prev: Lead[]) => {
+          const cloudIds = new Set(mappedCloudLeads.map((l: Lead) => l.id));
+          const cloudNames = new Set(mappedCloudLeads.map((l: Lead) => `${l.prospectName}|${l.prospectPhone}`));
           
-          const localOnly = prev.filter(l => {
+          const localOnly = prev.filter((l: Lead) => {
             if (cloudIds.has(l.id)) return false;
             if (isTemp(l.id) && cloudNames.has(`${l.prospectName}|${l.prospectPhone}`)) return false;
             return true;
@@ -743,10 +808,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       if (prod.data) {
-        setProducts(prev => {
-          const filteredCloudProducts = prod.data!.filter(p => !(deletedItems.products || []).includes(p.id));
-          const cloudIds = new Set(filteredCloudProducts.map(p => p.id));
-          const localOnly = prev.filter(p => !cloudIds.has(p.id));
+        setProducts((prev: Product[]) => {
+          const filteredCloudProducts = (prod.data as any[]).filter((p: Product) => !(deletedItems.products || []).includes(p.id));
+          const cloudIds = new Set(filteredCloudProducts.map((p: Product) => p.id));
+          const localOnly = prev.filter((p: Product) => !cloudIds.has(p.id));
           const merged = [...filteredCloudProducts as any, ...localOnly];
           saveLocal(STORAGE_KEYS.PRODUCTS, merged);
           return merged;
@@ -754,10 +819,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       if (inv.data) {
-        const mapped = inv.data.map(mapDBToInventory).filter(i => !(deletedItems.inventory || []).includes(i.id));
-        setInventory(prev => {
-          const cloudIds = new Set(mapped.map(i => i.id));
-          const localOnly = prev.filter(i => !cloudIds.has(i.id));
+        const mapped = (inv.data as any[]).map(mapDBToInventory).filter((i: InventoryItem) => !(deletedItems.inventory || []).includes(i.id));
+        setInventory((prev: InventoryItem[]) => {
+          const cloudIds = new Set(mapped.map((i: InventoryItem) => i.id));
+          const localOnly = prev.filter((i: InventoryItem) => !cloudIds.has(i.id));
           const merged = [...mapped, ...localOnly];
           saveLocal(STORAGE_KEYS.INVENTORY, merged);
           return merged;
@@ -765,12 +830,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       if (ord.data) {
-        const mapped = ord.data.map(mapDBToOrder).filter(o => !(deletedItems.orders || []).includes(o.id));
-        setOrders(prev => {
-          const cloudIds = new Set(mapped.map(o => o.id));
-          const cloudKeys = new Set(mapped.map(o => `${o.customerId}|${o.total}|${o.date}`));
+        const mapped = (ord.data as any[]).map(mapDBToOrder).filter((o: Order) => !(deletedItems.orders || []).includes(o.id));
+        setOrders((prev: Order[]) => {
+          const cloudIds = new Set(mapped.map((o: Order) => o.id));
+          const cloudKeys = new Set(mapped.map((o: Order) => `${o.customerId}|${o.total}|${o.date}`));
           
-          const localOnly = prev.filter(o => {
+          const localOnly = prev.filter((o: Order) => {
             if (cloudIds.has(o.id)) return false;
             if (isTemp(o.id) && cloudKeys.has(`${o.customerId}|${o.total}|${o.date}`)) return false;
             return true;
@@ -783,10 +848,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       if (tea.data) {
-        const mapped = tea.data.map(mapDBToTeamMember).filter(t => !(deletedItems.team || []).includes(t.id));
-        setTeam(prev => {
-          const cloudIds = new Set(mapped.map(t => t.id));
-          const localOnly = prev.filter(t => !cloudIds.has(t.id));
+        const mapped = (tea.data as any[]).map(mapDBToTeamMember).filter((t: TeamMember) => !(deletedItems.team || []).includes(t.id));
+        setTeam((prev: TeamMember[]) => {
+          const cloudIds = new Set(mapped.map((t: TeamMember) => t.id));
+          const localOnly = prev.filter((t: TeamMember) => !cloudIds.has(t.id));
           const merged = [...mapped, ...localOnly];
           saveLocal(STORAGE_KEYS.TEAM, merged);
           return merged;
@@ -794,12 +859,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       if (appt.data) {
-        const mapped = appt.data.map(mapDBToAppointment).filter(a => !(deletedItems.appointments || []).includes(a.id));
-        setAppointments(prev => {
-          const cloudIds = new Set(mapped.map(a => a.id));
-          const cloudKeys = new Set(mapped.map(a => `${a.client}|${a.date}|${a.time}|${a.type}`));
+        const mapped = (appt.data as any[]).map(mapDBToAppointment).filter((a: Appointment) => !(deletedItems.appointments || []).includes(a.id));
+        setAppointments((prev: Appointment[]) => {
+          const cloudIds = new Set(mapped.map((a: Appointment) => a.id));
+          const cloudKeys = new Set(mapped.map((a: Appointment) => `${a.client}|${a.date}|${a.time}|${a.type}`));
           
-          const localOnly = prev.filter(a => {
+          const localOnly = prev.filter((a: Appointment) => {
             if (cloudIds.has(a.id)) return false;
             if (isTemp(a.id) && cloudKeys.has(`${a.client}|${a.date}|${a.time}|${a.type}`)) return false;
             return true;
@@ -812,10 +877,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       if (prog.data) {
-        const mapped = prog.data.map(mapDBToProgram).filter(p => !(deletedItems.programs414 || []).includes(p.id));
-        setPrograms414(prev => {
-          const cloudIds = new Set(mapped.map(p => p.id));
-          const localOnly = prev.filter(p => !cloudIds.has(p.id));
+        const mapped = (prog.data as any[]).map(mapDBToProgram).filter((p: Program414) => !(deletedItems.programs414 || []).includes(p.id));
+        setPrograms414((prev: Program414[]) => {
+          const cloudIds = new Set(mapped.map((p: Program414) => p.id));
+          const localOnly = prev.filter((p: Program414) => !cloudIds.has(p.id));
           const merged = [...mapped, ...localOnly];
           saveLocal(STORAGE_KEYS.PROGRAMS_414, merged);
           return merged;
@@ -1632,68 +1697,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const importBackup = async (json: string) => {
-    console.log("SKY MANAGER: Iniciando resgate de dados...");
+    console.log("SKY MANAGER: Iniciando restauração de backup completo...");
     try {
-      // 1. Limpeza e normalização extrema
-      const sanitized = json
-        .replace(/nulo/g, 'null')
-        .replace(/\\n/g, ' ')
-        .replace(/\n/g, ' ')
-        .replace(/\\"/g, '"')
-        .replace(/{{/g, '{')
-        .trim();
+      let data: any;
+      try {
+        data = JSON.parse(json);
+      } catch (e) {
+        // Tenta limpar se fof colagem manual com caracteres estranhos
+        const sanitized = json
+          .replace(/nulo/g, 'null')
+          .replace(/\\n/g, ' ')
+          .replace(/\n/g, ' ')
+          .replace(/\\"/g, '"')
+          .replace(/{{/g, '{')
+          .trim();
+        data = JSON.parse(sanitized);
+      }
 
-      let recoveredLeads: any[] = [];
-      
-      // 2. Scanner agressivo de Leads
-      // Procura por blocos que contenham prospectName e id
-      const blocks = sanitized.split('{"prospectName"');
-      blocks.forEach(block => {
-        if (!block.trim()) return;
-        
-        const fullBlock = '{"prospectName"' + block;
-        // Tenta encontrar o fim do objeto procurando pelo ID
-        const idMatch = fullBlock.match(/,"id":"(temp_.*?|.*?)"/);
-        if (idMatch) {
-          const endIndex = fullBlock.indexOf(idMatch[0]) + idMatch[0].length + 1;
-          let potentialJson = fullBlock.substring(0, endIndex);
-          if (!potentialJson.endsWith('}')) potentialJson += '}';
+      if (!data || typeof data !== 'object') {
+        throw new Error("Formato de backup inválido");
+      }
 
-          try {
-            // Tenta parsar o bloco
-            const lead = JSON.parse(potentialJson);
-            if (lead.prospectName) recoveredLeads.push(lead);
-          } catch (e) {
-            // Se falhar, tenta extrair campos via Regex (Último recurso)
-            const name = potentialJson.match(/"prospectName":"(.*?)"/)?.[1];
-            const phone = potentialJson.match(/"prospectPhone":"(.*?)"/)?.[1];
-            const id = potentialJson.match(/"id":"(.*?)"/)?.[1];
-            const stage = potentialJson.match(/"stage":"(.*?)"/)?.[1];
-            
-            if (name && id) {
-              recoveredLeads.push({
-                id,
-                prospectName: name,
-                prospectPhone: phone || "",
-                stage: stage || "Leads",
-                lastInteraction: new Date().toISOString(),
-                pipelineType: 'new'
-              });
-            }
-          }
+      const keys = [
+        'sky_customers', 'sky_leads', 'sky_products', 'sky_orders', 
+        'sky_team', 'sky_settings_fees', 'sky_programs_414', 
+        'sky_inventory', 'sky_pipeline_order', 'sky_user_profile',
+        'sky_appointments'
+      ];
+
+      let count = 0;
+      keys.forEach(key => {
+        if (data[key]) {
+          localStorage.setItem(key, data[key]);
+          count++;
         }
       });
 
-      if (recoveredLeads.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(recoveredLeads));
-        alert(`RESGATE CONCLUÍDO!\n\nRecuperamos ${recoveredLeads.length} Leads do seu backup.\n\nO sistema irá reiniciar para mostrar os dados.`);
+      if (count > 0) {
+        alert(`SUCESSO!\n\nRestauramos ${count} categorias de dados do seu backup.\n\nO sistema irá reiniciar para aplicar as mudanças.`);
         window.location.reload();
       } else {
-        alert("Não foi possível encontrar dados válidos no texto colado. Verifique se copiou o backup completo.");
+        // Fallback para o scanner agressivo se o JSON não estiver no formato esperado (legado)
+        const recoveredLeads: any[] = [];
+        const blocks = json.split('{"prospectName"');
+        blocks.forEach(block => {
+          if (!block.trim()) return;
+          const fullBlock = '{"prospectName"' + block;
+          const idMatch = fullBlock.match(/,"id":"(temp_.*?|.*?)"/);
+          if (idMatch) {
+            const endIndex = fullBlock.indexOf(idMatch[0]) + idMatch[0].length + 1;
+            let potentialJson = fullBlock.substring(0, endIndex);
+            if (!potentialJson.endsWith('}')) potentialJson += '}';
+            try {
+              const lead = JSON.parse(potentialJson);
+              if (lead.prospectName) recoveredLeads.push(lead);
+            } catch (e) {}
+          }
+        });
+
+        if (recoveredLeads.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(recoveredLeads));
+          alert(`RESGATE PARCIAL!\n\nRecuperamos ${recoveredLeads.length} Leads.\n\nO sistema irá reiniciar.`);
+          window.location.reload();
+        } else {
+          alert("Nenhum dado válido encontrado no backup.");
+        }
       }
     } catch (e) {
-      console.error("Erro no resgate:", e);
-      alert("Falha ao processar o texto. Tente copiar novamente do celular.");
+      console.error("Erro na restauração:", e);
+      alert("Falha ao processar o backup. Verifique se o arquivo ou texto está correto.");
     }
   };
 

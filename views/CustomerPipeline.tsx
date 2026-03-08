@@ -341,12 +341,6 @@ const CustomerPipeline: React.FC<CustomerPipelineProps> = ({ type }) => {
         </div>
         <div className="flex gap-2">
           <button 
-            onClick={() => clearPipelineLeads(type)} 
-            className="bg-red-50 text-red-700 border-2 border-red-100 px-6 py-3 rounded-2xl font-black shadow-sm hover:border-red-500 transition-colors flex items-center gap-2"
-          >
-            <Trash2 size={18} /> Limpar Tudo
-          </button>
-          <button 
             onClick={() => fileInputRef.current?.click()} 
             className="bg-indigo-50 text-indigo-700 border-2 border-indigo-100 px-6 py-3 rounded-2xl font-black shadow-sm hover:border-indigo-500 transition-colors flex items-center gap-2"
           >

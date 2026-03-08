@@ -221,7 +221,7 @@ const Dashboard: React.FC = () => {
       conversion,
       avgTicket
     };
-  }, [orders, appointments, leads, currentMonth, currentYear, pipelineOrder]);
+  }, [orders, appointments, leads, currentMonth, currentYear, pipelineOrder, millionPipelineOrder, skyPipelineOrder, dignPipelineOrder]);
 
   // --- CÁLCULOS BLOCO 3 & 4: FUNIS ---
   const funnelData = (type: 'new' | 'million' | 'sky' | 'dign') => {
@@ -234,10 +234,46 @@ const Dashboard: React.FC = () => {
       dign: dignPipelineOrder
     }[type];
 
+    const normalize = (s: string) => s.toLowerCase().trim().replace(/ã/g, 'a').replace(/ó/g, 'o').replace(/ê/g, 'e').replace(/í/g, 'i');
+
     return stages.map((stage, index) => {
-      const count = filteredLeads.filter(l => l.stage === stage).length;
-      const value = filteredLeads.filter(l => l.stage === stage).reduce((acc, l) => acc + (l.estimatedValue || 0), 0);
-      const prevCount = index > 0 ? filteredLeads.filter(l => l.stage === stages[index-1]).length : 0;
+      const normalizedStage = normalize(stage);
+      const stageLeads = filteredLeads.filter(l => {
+        const lStage = normalize(l.stage || '');
+        // Match exato ou se um contém o outro (ex: 'Clientes Milionário' vs 'Clientes Million')
+        if (lStage === normalizedStage) return true;
+        
+        // Casos especiais de normalização
+        if (normalizedStage.includes('million') || normalizedStage.includes('milionario')) {
+          return lStage.includes('million') || lStage.includes('milionario');
+        }
+        if (normalizedStage.includes('dign')) {
+          return lStage.includes('dign');
+        }
+        if (normalizedStage.includes('sky')) {
+          return lStage.includes('sky') || lStage === 'produtos';
+        }
+        
+        return false;
+      });
+
+      const count = stageLeads.length;
+      const value = stageLeads.reduce((acc, l) => acc + (l.estimatedValue || 0), 0);
+      
+      // Para conversão, comparamos com o estágio anterior normalize
+      let prevCount = 0;
+      if (index > 0) {
+        const prevStageNorm = normalize(stages[index-1]);
+        prevCount = filteredLeads.filter(l => {
+          const lStage = normalize(l.stage || '');
+          if (lStage === prevStageNorm) return true;
+          if (prevStageNorm.includes('million') || prevStageNorm.includes('milionario')) return lStage.includes('million') || lStage.includes('milionario');
+          if (prevStageNorm.includes('dign')) return lStage.includes('dign');
+          if (prevStageNorm.includes('sky')) return lStage.includes('sky') || lStage === 'produtos';
+          return false;
+        }).length;
+      }
+      
       const conv = prevCount > 0 ? (count / prevCount) * 100 : 0;
 
       return { stage, count, value, conv };
@@ -245,9 +281,9 @@ const Dashboard: React.FC = () => {
   };
 
   const newFunnel = useMemo(() => funnelData('new'), [leads, pipelineOrder]);
-  const millionFunnel = useMemo(() => funnelData('million'), [leads, pipelineOrder]);
-  const skyFunnel = useMemo(() => funnelData('sky'), [leads, pipelineOrder]);
-  const dignFunnel = useMemo(() => funnelData('dign'), [leads, pipelineOrder]);
+  const millionFunnel = useMemo(() => funnelData('million'), [leads, millionPipelineOrder]);
+  const skyFunnel = useMemo(() => funnelData('sky'), [leads, skyPipelineOrder]);
+  const dignFunnel = useMemo(() => funnelData('dign'), [leads, dignPipelineOrder]);
 
   const getStatusColor = (value: number, meta: number) => {
     if (value >= meta) return 'text-green-600 border-green-500';
@@ -504,7 +540,7 @@ const Dashboard: React.FC = () => {
             <div className="space-y-1 text-right">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Taxa de Conversão Real</p>
               <p className="text-2xl font-black text-blue-600 bg-blue-50 inline-block px-4 py-1 rounded-2xl">
-                {newFunnel[0].count > 0 ? ((newFunnel[newFunnel.length-1].count / newFunnel[0].count) * 100).toFixed(1) : 0}%
+                {newFunnel.length > 0 && newFunnel[0].count > 0 ? ((newFunnel[newFunnel.length-1].count / newFunnel[0].count) * 100).toFixed(1) : 0}%
               </p>
             </div>
           </div>
@@ -535,14 +571,18 @@ const Dashboard: React.FC = () => {
             {millionFunnel.map((item, i) => {
               const baseWidth = 100 - (i * 12);
               const nextWidth = 100 - ((i + 1) * 12);
+              const isLast = i === millionFunnel.length - 1;
               return (
-                <div key={i} className="relative group mb-1 last:mb-0">
+                <div key={i} className="relative group mb-2 last:mb-0">
                   <div 
-                    className="h-20 bg-gradient-to-br from-orange-500 to-red-600 shadow-lg transition-all duration-500 hover:brightness-110 flex items-center justify-center relative overflow-hidden"
+                    className="h-24 bg-gradient-to-br from-orange-400 via-orange-500 to-red-600 shadow-xl transition-all duration-500 hover:brightness-110 flex items-center justify-center relative overflow-hidden"
                     style={{ 
                       width: `${baseWidth}%`, 
                       margin: '0 auto',
-                      clipPath: `polygon(0% 0%, 100% 0%, ${(100 - (nextWidth/baseWidth * 100))/2}% 100%, ${100 - (100 - (nextWidth/baseWidth * 100))/2}% 100%)`
+                      clipPath: isLast 
+                        ? `polygon(0% 0%, 100% 0%, 50% 100%)`
+                        : `polygon(${(100 - (100 * (100 - (i * 4)) / 100))/2}% 0%, ${100 - (100 - (100 * (100 - (i * 4)) / 100))/2}% 0%, ${100 - (100 - (100 * (100 - (i+1) * 4) / 100))/2}% 100%, ${(100 - (100 * (100 - (i+1) * 4) / 100))/2}% 100%)`,
+                      borderRadius: isLast ? '0 0 50% 50%' : '0'
                     }}
                   >
                     <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -554,12 +594,18 @@ const Dashboard: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Label flutuante */}
+                  {/* Label flutuante lateral */}
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-[110%] w-32 md:w-48 text-left hidden md:block">
-                    <p className="text-xs font-black text-[#003459] mb-0.5">R$ {item.value.toLocaleString('pt-BR')}</p>
-                    {i > 0 && (
-                      <p className="text-[9px] font-black text-red-500 uppercase tracking-widest">Conv: {item.conv.toFixed(0)}%</p>
-                    )}
+                    <div className="bg-white/40 backdrop-blur-md p-3 rounded-2xl border border-white/40 shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-0.5">Potencial</p>
+                      <p className="text-sm font-black text-[#003459]">R$ {item.value.toLocaleString('pt-BR')}</p>
+                      {i > 0 && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <TrendingUp size={10} className="text-green-500" />
+                          <p className="text-[9px] font-black text-green-600 uppercase tracking-widest">{item.conv.toFixed(0)}% retido</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -574,7 +620,7 @@ const Dashboard: React.FC = () => {
             <div className="space-y-1 text-right">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Conversão Million</p>
               <p className="text-2xl font-black text-orange-600 bg-orange-50 inline-block px-4 py-1 rounded-2xl">
-                {millionFunnel[0].count > 0 ? ((millionFunnel[millionFunnel.length-1].count / millionFunnel[0].count) * 100).toFixed(1) : 0}%
+                {millionFunnel.length > 0 && millionFunnel[0].count > 0 ? ((millionFunnel[millionFunnel.length-1].count / millionFunnel[0].count) * 100).toFixed(1) : 0}%
               </p>
             </div>
           </div>
@@ -593,11 +639,11 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-3xl font-black text-blue-600">{skyFunnel[0].count}</p>
+                <p className="text-3xl font-black text-blue-600">{skyFunnel[0]?.count || 0}</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Contatos Ativos</p>
               </div>
               <div className="text-right">
-                <p className="text-xl font-black text-[#003459]">R$ {skyFunnel.reduce((acc, i) => acc + i.value, 0).toLocaleString('pt-BR')}</p>
+                <p className="text-xl font-black text-[#003459]">R$ {(skyFunnel.reduce((acc, i) => acc + i.value, 0) || 0).toLocaleString('pt-BR')}</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Valor em Pipeline</p>
               </div>
             </div>
@@ -618,11 +664,11 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-3xl font-black text-purple-600">{dignFunnel[0].count}</p>
+                <p className="text-3xl font-black text-purple-600">{dignFunnel[0]?.count || 0}</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Contatos Ativos</p>
               </div>
               <div className="text-right">
-                <p className="text-xl font-black text-[#003459]">R$ {dignFunnel.reduce((acc, i) => acc + i.value, 0).toLocaleString('pt-BR')}</p>
+                <p className="text-xl font-black text-[#003459]">R$ {(dignFunnel.reduce((acc, i) => acc + i.value, 0) || 0).toLocaleString('pt-BR')}</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Valor em Pipeline</p>
               </div>
             </div>
