@@ -26,13 +26,15 @@ import Modal from '../components/Modal';
 import FollowUpModal from '../components/FollowUpModal';
 
 const Customers: React.FC = () => {
-  const { customers, orders, addCustomer, createOrder, team, removeCustomer, removeOrder, updateOrder, selectedCustomerId, setSelectedCustomerId, addLead, updateLeadStage } = useApp();
+  const { customers, orders, addCustomer, updateCustomer, createOrder, team, removeCustomer, removeOrder, updateOrder, selectedCustomerId, setSelectedCustomerId, addLead, updateLeadStage } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [formData, setFormData] = useState({ name: '', phone: '', city: '', notes: '' });
+  const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
+  const [editingCustomerData, setEditingCustomerData] = useState<Customer | null>(null);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   
   const [quickSale, setQuickSale] = useState({ 
@@ -272,9 +274,21 @@ const Customers: React.FC = () => {
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
+                    setEditingCustomerData(customer);
+                    setIsEditCustomerModalOpen(true);
+                  }}
+                  className="p-3 text-slate-300 hover:text-[#00A8E8] transition-colors"
+                  title="Editar Cliente"
+                >
+                  <Edit3 size={18} />
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if(confirm(`Deseja remover ${customer.name}?`)) removeCustomer(customer.id);
                   }}
                   className="p-3 text-slate-300 hover:text-red-500 transition-colors"
+                  title="Excluir Cliente"
                 >
                   <Trash2 size={18} />
                 </button>
@@ -460,6 +474,36 @@ const Customers: React.FC = () => {
           </div>
           <button type="submit" className="w-full py-5 bg-[#00A8E8] text-white rounded-3xl font-black uppercase tracking-widest shadow-xl">Salvar Cliente</button>
         </form>
+      </Modal>
+
+      <Modal isOpen={isEditCustomerModalOpen} onClose={() => setIsEditCustomerModalOpen(false)} title="Editar Cliente">
+        {editingCustomerData && (
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            updateCustomer(editingCustomerData);
+            setIsEditCustomerModalOpen(false);
+          }} className="space-y-6">
+            <div>
+              <label className="text-xs font-black text-slate-900 uppercase mb-1 block px-1">Nome Completo</label>
+              <input required className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-black text-slate-900 outline-none" value={editingCustomerData.name} onChange={e => setEditingCustomerData({...editingCustomerData, name: e.target.value})} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-black text-slate-900 uppercase mb-1 block px-1">WhatsApp</label>
+                <input required className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-black text-slate-900 outline-none" value={editingCustomerData.phone} onChange={e => setEditingCustomerData({...editingCustomerData, phone: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-900 uppercase mb-1 block px-1">Cidade</label>
+                <input required className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-black text-slate-900 outline-none" value={editingCustomerData.city} onChange={e => setEditingCustomerData({...editingCustomerData, city: e.target.value})} />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-black text-slate-900 uppercase mb-1 block px-1">Observações</label>
+              <textarea className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-black text-slate-900 outline-none h-24 resize-none" value={editingCustomerData.notes || ''} onChange={e => setEditingCustomerData({...editingCustomerData, notes: e.target.value})} />
+            </div>
+            <button type="submit" className="w-full py-5 bg-[#00A8E8] text-white rounded-3xl font-black uppercase tracking-widest shadow-xl">Salvar Alterações</button>
+          </form>
+        )}
       </Modal>
     </div>
   );

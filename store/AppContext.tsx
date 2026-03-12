@@ -37,6 +37,7 @@ interface AppContextType {
   syncToGoogleCalendar: (event: Appointment) => Promise<void>;
   syncPendingData: () => Promise<void>;
   addCustomer: (c: Omit<Customer, 'id' | 'interactions' | 'orders'>) => Promise<string | null>;
+  updateCustomer: (c: Customer) => Promise<void>;
   removeCustomer: (id: string) => Promise<void>;
   removeLead: (id: string) => Promise<void>;
   removeOrder: (id: string) => Promise<void>;
@@ -1572,6 +1573,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return localId;
   };
 
+  const updateCustomer = async (c: Customer) => {
+    const updated = customers.map(x => x.id === c.id ? c : x);
+    setCustomers(updated);
+    saveLocal(STORAGE_KEYS.CUSTOMERS, updated);
+    triggerSaveUpdate();
+    if (!isTemp(c.id) && isSupabaseReady && supabase) {
+      supabase.from('customers').update({ name: c.name, phone: c.phone, city: c.city, notes: c.notes }).eq('id', c.id).then();
+    }
+  };
+
   const registerBiometrics = async () => {
     if (!session?.user?.email) {
       alert('Você precisa estar logado para registrar a biometria.');
@@ -1974,7 +1985,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       googleTokens,
       registerBiometrics,
       loginBiometrics, setGoogleMapsApiKey, setGoogleTokens, syncToGoogleCalendar, syncPendingData,
-      addCustomer, removeCustomer, removeLead, removeOrder, removeAppointment, removeTeamMember, removeProduct, removeInventoryItem,
+      addCustomer, updateCustomer, removeCustomer, removeLead, removeOrder, removeAppointment, removeTeamMember, removeProduct, removeInventoryItem,
       addLead, importMillionLeads, importDignLeads, importSkyLeads, importLeadsFromRawText, fixPipelineLeads, moveLeadsBetweenPipelines, clearPipelineLeads, updateLeadStage, updateLead, updatePipelineOrder, renamePipelineStage, addTeamMember, 
       addProduct, createOrder, updateOrder,
       updateMachineFees, resetApp, importBackup, updateUserProfile, start414Program, 

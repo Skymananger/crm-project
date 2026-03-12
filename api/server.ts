@@ -188,6 +188,65 @@ app.post('/api/auth/biometrics/verify-login', async (req, res) => {
   }
 });
 
+import { createClient } from "@supabase/supabase-js";
+
+// API: Webhook para receber leads de assistentes e integrações externas (Zapier, Make, etc)
+app.post("/api/webhooks/leads", async (req: Request, res: Response) => {
+  const { pipelineType, prospectName, prospectPhone, estimatedValue } = req.body;
+  
+  // Validação do Token de Segurança via Header (Bearer Token)
+  const authHeaderRaw = req.headers['authorization'] || req.headers['x-api-key'];
+  const authHeader = Array.isArray(authHeaderRaw) ? authHeaderRaw[0] : authHeaderRaw;
+  const expectedSecret = process.env.WEBHOOK_SECRET || process.env.SUPABASE_ANON_KEY;
+  
+  if (!authHeader || typeof authHeader !== 'string' || authHeader.replace('Bearer ', '') !== expectedSecret) {
+    return res.status(401).json({ error: "Não autorizado. Token de webhook inválido." });
+  }
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(500).json({ error: "Variáveis de ambiente do Supabase não configuradas no servidor." });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  try {
+    // Forçar estágio inicial para novos leads
+    const defaultStage = 'Leads';
+
+    const payload = {
+      pipelineType: pipelineType || 'new',
+      stage: defaultStage,
+      prospectName: prospectName || 'Lead Automático (Webhook)',
+      prospectPhone: prospectPhone || '',
+      estimatedValue: estimatedValue || 0,
+      lastInteraction: new Date().toISOString(),
+      nextContactDate: new Date().toISOString().split('T')[0], // Agendar follow-up para hoje
+      ...req.body
+    };
+
+    const { data, error } = await supabase
+      .from('leads')
+      .insert([payload])
+      .select();
+
+    if (error) {
+      console.error("Erro no Supabase ao inserir lead via webhook:", error);
+      return res.status(400).json({ error: "Erro ao inserir lead no banco", details: error.message });
+    }
+
+    res.status(201).json({ 
+      success: true,
+      message: "Lead inserido com sucesso", 
+      leadId: data[0]?.id 
+    });
+  } catch (error: any) {
+    console.error("Erro interno no Webhook /api/webhooks/leads:", error);
+    res.status(500).json({ error: "Erro interno do servidor", message: error.message });
+  }
+});
+
 export default app;
 
 async function startServer() {

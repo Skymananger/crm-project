@@ -13,9 +13,10 @@ interface LeadCardProps {
   onDragStart: (e: React.DragEvent, id: string) => void;
   onClick: () => void;
   onDelete: (e: React.MouseEvent) => void;
+  onEdit: (e: React.MouseEvent) => void;
 }
 
-const LeadCard: React.FC<LeadCardProps> = ({ lead, onDragStart, onClick, onDelete }) => (
+const LeadCard: React.FC<LeadCardProps> = ({ lead, onDragStart, onClick, onDelete, onEdit }) => (
   <div 
     draggable
     onDragStart={(e) => onDragStart(e, lead.id)}
@@ -25,12 +26,18 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onDragStart, onClick, onDelet
     <div className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-[#00A8E8]">
       <GripVertical size={20} />
     </div>
-    <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100">
+    <div className="absolute right-3 top-3 flex items-center gap-1.5 z-10">
+      <button 
+        onClick={onEdit}
+        className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-[#00A8E8] hover:bg-blue-50 rounded-xl transition-all active:scale-90 border border-slate-100 shadow-sm"
+      >
+        <Edit3 size={15} />
+      </button>
       <button 
         onClick={onDelete}
-        className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+        className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-90 border border-slate-100 shadow-sm"
       >
-        <Trash2 size={14} />
+        <Trash2 size={15} />
       </button>
     </div>
     <div className="pl-4">
@@ -74,6 +81,8 @@ const CustomerPipeline: React.FC<CustomerPipelineProps> = ({ type }) => {
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [isEditLeadModalOpen, setIsEditLeadModalOpen] = useState(false);
+  const [editingLeadData, setEditingLeadData] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentPipelineOrder = {
@@ -332,6 +341,33 @@ const CustomerPipeline: React.FC<CustomerPipelineProps> = ({ type }) => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleEditLeadClick = (e: React.MouseEvent, lead: Lead) => {
+    e.stopPropagation();
+    setEditingLeadData({
+      ...lead,
+      estimatedValue: lead.estimatedValue?.toString() || ''
+    });
+    setIsEditLeadModalOpen(true);
+  };
+
+  const handleUpdateLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLeadData || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await updateLead({
+        ...editingLeadData,
+        estimatedValue: Number(editingLeadData.estimatedValue) || 0,
+        lastInteraction: new Date().toISOString()
+      });
+      setIsEditLeadModalOpen(false);
+      setEditingLeadData(null);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -339,12 +375,12 @@ const CustomerPipeline: React.FC<CustomerPipelineProps> = ({ type }) => {
           <h1 className="text-2xl font-black text-[#003459]">{pipelineTitle}</h1>
           <p className="text-slate-900 font-bold">Gerencie o relacionamento com seus clientes da filial {type.toUpperCase()}.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button 
             onClick={() => fileInputRef.current?.click()} 
-            className="bg-indigo-50 text-indigo-700 border-2 border-indigo-100 px-6 py-3 rounded-2xl font-black shadow-sm hover:border-indigo-500 transition-colors flex items-center gap-2"
+            className="min-h-[48px] px-6 py-3 bg-indigo-50 text-indigo-700 border-2 border-indigo-100 rounded-2xl font-black shadow-sm hover:border-indigo-500 transition-all active:scale-95 flex items-center justify-center gap-2"
           >
-            <Upload size={18} /> Importar CSV
+            <Upload size={18} /> <span className="text-[11px] uppercase tracking-widest hidden sm:inline">Importar</span>
           </button>
           <input 
             type="file" 
@@ -353,10 +389,12 @@ const CustomerPipeline: React.FC<CustomerPipelineProps> = ({ type }) => {
             accept=".csv,.txt" 
             className="hidden" 
           />
-          <button onClick={() => { setTempPipelineOrder(currentPipelineOrder); setIsSettingsModalOpen(true); }} className="bg-white text-[#003459] border-2 border-slate-200 px-6 py-3 rounded-2xl font-black shadow-sm hover:border-[#003459] transition-colors flex items-center gap-2">
-            <Settings2 size={18} /> Configurar Funil
+          <button onClick={() => { setTempPipelineOrder(currentPipelineOrder); setIsSettingsModalOpen(true); }} className="min-h-[48px] px-6 py-3 bg-white text-[#003459] border-2 border-slate-200 rounded-2xl font-black shadow-sm hover:border-[#003459] transition-all active:scale-95 flex items-center justify-center gap-2">
+            <Settings2 size={18} /> <span className="text-[11px] uppercase tracking-widest hidden sm:inline">Configurar</span>
           </button>
-          <button onClick={() => setIsModalOpen(true)} className="bg-[#00A8E8] text-white px-8 py-3 rounded-2xl font-black shadow-lg">Novo Contato</button>
+          <button onClick={() => setIsModalOpen(true)} className="min-h-[48px] px-8 py-3 bg-gradient-to-r from-[#00A8E8] to-[#007AFF] text-white rounded-2xl font-black shadow-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all">
+            <Plus size={18} /> <span className="text-[11px] uppercase tracking-widest">Novo Lead</span>
+          </button>
         </div>
       </div>
 
@@ -380,6 +418,7 @@ const CustomerPipeline: React.FC<CustomerPipelineProps> = ({ type }) => {
                       e.stopPropagation();
                       if(confirm(`Deseja remover o contato ${lead.prospectName}?`)) removeLead(lead.id);
                     }}
+                    onEdit={(e) => handleEditLeadClick(e, lead)}
                   />
                 ))}
               </div>
@@ -669,6 +708,69 @@ const CustomerPipeline: React.FC<CustomerPipelineProps> = ({ type }) => {
           </div>
           <button type="submit" className="w-full py-5 bg-[#00A8E8] text-white rounded-3xl font-black uppercase shadow-xl">Lançar Contato</button>
         </form>
+      </Modal>
+
+      <Modal isOpen={isEditLeadModalOpen} onClose={() => setIsEditLeadModalOpen(false)} title="Editar Lead">
+        {editingLeadData && (
+          <form onSubmit={handleUpdateLead} className="space-y-6">
+            <input required className="w-full p-4 bg-white rounded-2xl border-2 border-slate-200 font-black outline-none" placeholder="Nome" value={editingLeadData.prospectName} onChange={e => setEditingLeadData({...editingLeadData, prospectName: e.target.value})} />
+            <input required className="w-full p-4 bg-white rounded-2xl border-2 border-slate-200 font-black outline-none" placeholder="WhatsApp" value={editingLeadData.prospectPhone} onChange={e => setEditingLeadData({...editingLeadData, prospectPhone: e.target.value})} />
+            <AddressAutocomplete 
+              className="w-full p-4 bg-white rounded-2xl border-2 border-slate-200 font-black outline-none" 
+              placeholder="Endereço / Localização" 
+              value={editingLeadData.prospectAddress} 
+              onChange={(val: string) => setEditingLeadData({...editingLeadData, prospectAddress: val})} 
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-black text-slate-900 uppercase mb-2 block px-1">Fase do Funil</label>
+                <select 
+                  className="w-full p-4 bg-white rounded-2xl border-2 border-slate-200 font-black outline-none"
+                  value={editingLeadData.stage}
+                  onChange={e => setEditingLeadData({...editingLeadData, stage: e.target.value})}
+                >
+                  {currentPipelineOrder.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-900 uppercase mb-2 block px-1">Próximo Contato</label>
+                <input 
+                  type="date"
+                  className="w-full p-4 bg-white rounded-2xl border-2 border-slate-200 font-black outline-none" 
+                  value={editingLeadData.nextContactDate} 
+                  onChange={e => setEditingLeadData({...editingLeadData, nextContactDate: e.target.value})} 
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-black text-slate-900 uppercase mb-2 block px-1">Valor Estimado (R$)</label>
+                <input 
+                  type="number"
+                  className="w-full p-4 bg-white rounded-2xl border-2 border-slate-200 font-black outline-none" 
+                  placeholder="0,00" 
+                  value={editingLeadData.estimatedValue} 
+                  onChange={e => setEditingLeadData({...editingLeadData, estimatedValue: e.target.value})} 
+                />
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-900 uppercase mb-2 block px-1">Interesse</label>
+                <input className="w-full p-4 bg-white rounded-2xl border-2 border-slate-200 font-black outline-none" placeholder="Produto" value={editingLeadData.productInterest} onChange={e => setEditingLeadData({...editingLeadData, productInterest: e.target.value})} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-black text-slate-900 uppercase mb-2 block px-1">Notas / Observações</label>
+              <textarea 
+                className="w-full p-4 bg-white rounded-2xl border-2 border-slate-200 font-black outline-none h-32 resize-none" 
+                value={editingLeadData.prospectNotes || ''} 
+                onChange={e => setEditingLeadData({...editingLeadData, prospectNotes: e.target.value})}
+              />
+            </div>
+            <button type="submit" className="w-full py-5 bg-[#003459] text-white rounded-3xl font-black uppercase shadow-xl flex items-center justify-center gap-2">
+              {isSubmitting ? 'Salvando...' : <><Save size={20} /> Salvar Alterações</>}
+            </button>
+          </form>
+        )}
       </Modal>
     </div>
   );

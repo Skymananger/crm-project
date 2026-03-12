@@ -496,15 +496,15 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-8 relative z-10">
-          <div className="relative max-w-2xl mx-auto py-10 pt-20">
+          <div className="relative max-w-2xl mx-auto py-10 pt-20 z-10">
             {newFunnel.map((item, i) => {
               const baseWidth = 100 - (i * 12);
               const isLast = i === newFunnel.length - 1;
               return (
                 <div key={i} className="relative group mb-2 last:mb-0">
                   <div 
-                    className="h-24 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 shadow-xl transition-all duration-500 hover:brightness-110 flex items-center justify-center relative overflow-hidden"
+                    onClick={() => setActiveTab('pipeline')}
+                    className="h-24 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 shadow-xl transition-all duration-500 hover:brightness-110 flex items-center justify-center relative overflow-hidden cursor-pointer"
                     style={{ 
                       width: `${baseWidth}%`, 
                       margin: '0 auto',
@@ -552,9 +552,16 @@ const Dashboard: React.FC = () => {
                 {newFunnel.length > 0 && newFunnel[0].count > 0 ? ((newFunnel[newFunnel.length-1].count / newFunnel[0].count) * 100).toFixed(1) : 0}%
               </p>
             </div>
+            <div className="col-span-2">
+              <button 
+                onClick={() => setActiveTab('pipeline')} 
+                className="w-full mt-4 py-4 bg-[#003459] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg"
+              >
+                Ver Pipeline PROSPECÇÃO Completo
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       </section>
 
       {/* BLOCO 4: FUNIL CLIENTES MILLION */}
@@ -576,15 +583,15 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="relative max-w-2xl mx-auto py-10 pt-20">
+          <div className="relative max-w-2xl mx-auto py-10 pt-20 z-10">
             {millionFunnel.map((item, i) => {
               const baseWidth = 100 - (i * 12);
-              const nextWidth = 100 - ((i + 1) * 12);
               const isLast = i === millionFunnel.length - 1;
               return (
                 <div key={i} className="relative group mb-2 last:mb-0">
                   <div 
-                    className="h-24 bg-gradient-to-br from-orange-400 via-orange-500 to-red-600 shadow-xl transition-all duration-500 hover:brightness-110 flex items-center justify-center relative overflow-hidden"
+                    onClick={() => setActiveTab('customer-pipeline-million')}
+                    className="h-24 bg-gradient-to-br from-orange-400 via-orange-500 to-red-600 shadow-xl transition-all duration-500 hover:brightness-110 flex items-center justify-center relative overflow-hidden cursor-pointer"
                     style={{ 
                       width: `${baseWidth}%`, 
                       margin: '0 auto',
@@ -594,7 +601,7 @@ const Dashboard: React.FC = () => {
                       borderRadius: isLast ? '0 0 50% 50%' : '0'
                     }}
                   >
-                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <div className="text-center z-10 px-4">
                       <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">{item.stage}</p>
                       <p className="text-lg font-black text-white leading-none">
@@ -632,61 +639,188 @@ const Dashboard: React.FC = () => {
                 {millionFunnel.length > 0 && millionFunnel[0].count > 0 ? ((millionFunnel[millionFunnel.length-1].count / millionFunnel[0].count) * 100).toFixed(1) : 0}%
               </p>
             </div>
+            <div className="col-span-2">
+              <button 
+                onClick={() => setActiveTab('customer-pipeline-million')} 
+                className="w-full mt-4 py-4 bg-[#003459] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg"
+              >
+                Ver Pipeline PREMIUM Completo
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* BLOCO 5: RESUMO OUTRAS FILIAIS */}
+      {/* BLOCO 5: FUNIL CLIENTES SKY */}
       <section className="px-6 max-w-6xl mx-auto mb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-white/70 backdrop-blur-xl p-8 rounded-[3.5rem] border border-white shadow-xl shadow-blue-900/5 group hover:scale-[1.02] transition-all duration-500">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
-                <Cloud size={24} />
+        <div className="bg-white/70 backdrop-blur-xl p-10 lg:p-14 rounded-[4rem] border border-white shadow-2xl shadow-blue-900/5 relative overflow-hidden">
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-100 rounded-full blur-3xl opacity-50"></div>
+          
+          <div className="flex items-center justify-between mb-12 relative z-10">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full mb-3">
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Filial</span>
               </div>
-              <h3 className="text-xl font-black text-[#003459] tracking-tight uppercase">Filial SKY</h3>
+              <h2 className="text-3xl font-black text-[#003459] tracking-tight">Funil Sky</h2>
+              <p className="text-sm font-bold text-slate-400 mt-1 uppercase tracking-widest opacity-60">Operação Local</p>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-black text-blue-600">{skyFunnel[0]?.count || 0}</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Contatos Ativos</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-black text-[#003459]">R$ {(skyFunnel.reduce((acc, i) => acc + i.value, 0) || 0).toLocaleString('pt-BR')}</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Valor em Pipeline</p>
-              </div>
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-[2rem] flex items-center justify-center text-white shadow-xl shadow-blue-200">
+              <Cloud size={32} />
             </div>
-            <button 
-              onClick={() => setActiveTab('customer-pipeline-sky')} 
-              className="w-full mt-8 py-4 bg-[#003459] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#005086] transition-all shadow-lg shadow-blue-900/10"
-            >
-              Ver Pipeline SKY Completo
-            </button>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-xl p-8 rounded-[3.5rem] border border-white shadow-xl shadow-purple-900/5 group hover:scale-[1.02] transition-all duration-500">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600">
-                <Target size={24} />
-              </div>
-              <h3 className="text-xl font-black text-[#003459] tracking-tight uppercase">Filial DIGN</h3>
+          <div className="relative max-w-2xl mx-auto py-10 pt-20 z-10">
+            {skyFunnel.map((item, i) => {
+              const baseWidth = 100 - (i * 12);
+              const isLast = i === skyFunnel.length - 1;
+              return (
+                <div key={i} className="relative group mb-2 last:mb-0">
+                  <div 
+                    onClick={() => setActiveTab('customer-pipeline-sky')}
+                    className="h-24 bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600 shadow-xl transition-all duration-500 hover:brightness-110 flex items-center justify-center relative overflow-hidden cursor-pointer"
+                    style={{ 
+                      width: `${baseWidth}%`, 
+                      margin: '0 auto',
+                      clipPath: isLast 
+                        ? `polygon(0% 0%, 100% 0%, 50% 100%)`
+                        : `polygon(${(100 - (100 * (100 - (i * 4)) / 100))/2}% 0%, ${100 - (100 - (100 * (100 - (i * 4)) / 100))/2}% 0%, ${100 - (100 - (100 * (100 - (i+1) * 4) / 100))/2}% 100%, ${(100 - (100 * (100 - (i+1) * 4) / 100))/2}% 100%)`,
+                      borderRadius: isLast ? '0 0 50% 50%' : '0'
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="text-center z-10 px-4">
+                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">{item.stage}</p>
+                      <p className="text-lg font-black text-white leading-none">
+                        {item.count} <span className="text-[10px] opacity-60">LEADS</span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Label flutuante */}
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-[110%] w-32 md:w-48 text-left hidden md:block">
+                    <div className="bg-white/40 backdrop-blur-md p-3 rounded-2xl border border-white/40 shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-0.5">Potencial</p>
+                      <p className="text-sm font-black text-[#003459]">R$ {item.value.toLocaleString('pt-BR')}</p>
+                      {i > 0 && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <TrendingUp size={10} className="text-green-500" />
+                          <p className="text-[9px] font-black text-green-600 uppercase tracking-widest">Conv: {item.conv.toFixed(0)}%</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-2 gap-8 mt-14 pt-10 border-t border-slate-100 relative z-10">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Oportunidades Ativas</p>
+              <p className="text-2xl font-black text-[#003459]">R$ {skyFunnel.reduce((acc, i) => acc + i.value, 0).toLocaleString('pt-BR')}</p>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-black text-purple-600">{dignFunnel[0]?.count || 0}</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Contatos Ativos</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-black text-[#003459]">R$ {(dignFunnel.reduce((acc, i) => acc + i.value, 0) || 0).toLocaleString('pt-BR')}</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Valor em Pipeline</p>
-              </div>
+            <div className="space-y-1 text-right">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Conversão Sky</p>
+              <p className="text-2xl font-black text-blue-600 bg-blue-50 inline-block px-4 py-1 rounded-2xl">
+                {skyFunnel.length > 0 && skyFunnel[0].count > 0 ? ((skyFunnel[skyFunnel.length-1].count / skyFunnel[0].count) * 100).toFixed(1) : 0}%
+              </p>
             </div>
-            <button 
-              onClick={() => setActiveTab('customer-pipeline-dign')} 
-              className="w-full mt-8 py-4 bg-purple-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-purple-700 transition-all shadow-lg shadow-purple-900/10"
-            >
-              Ver Pipeline DIGN Completo
-            </button>
+            <div className="col-span-2">
+              <button 
+                onClick={() => setActiveTab('customer-pipeline-sky')} 
+                className="w-full mt-4 py-4 bg-[#003459] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#005086] transition-all shadow-lg shadow-blue-900/10"
+              >
+                Ver Pipeline SKY Completo
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* BLOCO 6: FUNIL CLIENTES DIGN */}
+      <section className="px-6 max-w-6xl mx-auto mb-16">
+        <div className="bg-white/70 backdrop-blur-xl p-10 lg:p-14 rounded-[4rem] border border-white shadow-2xl shadow-purple-900/5 relative overflow-hidden">
+          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-100 rounded-full blur-3xl opacity-50"></div>
+
+          <div className="flex items-center justify-between mb-12 relative z-10">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-purple-50 px-3 py-1 rounded-full mb-3">
+                <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse"></div>
+                <span className="text-[9px] font-black text-purple-600 uppercase tracking-widest">Filial</span>
+              </div>
+              <h2 className="text-3xl font-black text-[#003459] tracking-tight">Funil Dign</h2>
+              <p className="text-sm font-bold text-slate-400 mt-1 uppercase tracking-widest opacity-60">Expansão de Mercado</p>
+            </div>
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-700 rounded-[2rem] flex items-center justify-center text-white shadow-xl shadow-purple-200">
+              <Target size={32} />
+            </div>
+          </div>
+
+          <div className="relative max-w-2xl mx-auto py-10 pt-20 z-10">
+            {dignFunnel.map((item, i) => {
+              const baseWidth = 100 - (i * 12);
+              const isLast = i === dignFunnel.length - 1;
+              return (
+                <div key={i} className="relative group mb-2 last:mb-0">
+                  <div 
+                    onClick={() => setActiveTab('customer-pipeline-dign')}
+                    className="h-24 bg-gradient-to-br from-purple-400 via-purple-500 to-fuchsia-600 shadow-xl transition-all duration-500 hover:brightness-110 flex items-center justify-center relative overflow-hidden cursor-pointer"
+                    style={{ 
+                      width: `${baseWidth}%`, 
+                      margin: '0 auto',
+                      clipPath: isLast 
+                        ? `polygon(0% 0%, 100% 0%, 50% 100%)`
+                        : `polygon(${(100 - (100 * (100 - (i * 4)) / 100))/2}% 0%, ${100 - (100 - (100 * (100 - (i * 4)) / 100))/2}% 0%, ${100 - (100 - (100 * (100 - (i+1) * 4) / 100))/2}% 100%, ${(100 - (100 * (100 - (i+1) * 4) / 100))/2}% 100%)`,
+                      borderRadius: isLast ? '0 0 50% 50%' : '0'
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="text-center z-10 px-4">
+                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">{item.stage}</p>
+                      <p className="text-lg font-black text-white leading-none">
+                        {item.count} <span className="text-[10px] opacity-60">LEADS</span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Label flutuante */}
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-[110%] w-32 md:w-48 text-left hidden md:block">
+                    <div className="bg-white/40 backdrop-blur-md p-3 rounded-2xl border border-white/40 shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-0.5">Potencial</p>
+                      <p className="text-sm font-black text-[#003459]">R$ {item.value.toLocaleString('pt-BR')}</p>
+                      {i > 0 && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <TrendingUp size={10} className="text-green-500" />
+                          <p className="text-[9px] font-black text-green-600 uppercase tracking-widest">Conv: {item.conv.toFixed(0)}%</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-2 gap-8 mt-14 pt-10 border-t border-slate-100 relative z-10">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Oportunidades Ativas</p>
+              <p className="text-2xl font-black text-[#003459]">R$ {dignFunnel.reduce((acc, i) => acc + i.value, 0).toLocaleString('pt-BR')}</p>
+            </div>
+            <div className="space-y-1 text-right">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">Conversão Dign</p>
+              <p className="text-2xl font-black text-purple-600 bg-purple-50 inline-block px-4 py-1 rounded-2xl">
+                {dignFunnel.length > 0 && dignFunnel[0].count > 0 ? ((dignFunnel[dignFunnel.length-1].count / dignFunnel[0].count) * 100).toFixed(1) : 0}%
+              </p>
+            </div>
+            <div className="col-span-2">
+              <button 
+                onClick={() => setActiveTab('customer-pipeline-dign')} 
+                className="w-full mt-4 py-4 bg-purple-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-purple-700 transition-all shadow-lg shadow-purple-900/10"
+              >
+                Ver Pipeline DIGN Completo
+              </button>
+            </div>
           </div>
         </div>
       </section>
