@@ -9,6 +9,21 @@
     <meta name="apple-mobile-web-app-title" content="Sky Manager" />
     <meta name="mobile-web-app-capable" content="yes" />
     
+    <!-- Polyfill para Drag and Drop no Mobile -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/default.css">
+    <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
+    <script>
+      // Força a ativação imediata do polyfill
+      window.addEventListener('DOMContentLoaded', function() {
+        MobileDragDrop.polyfill({
+          dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
+        });
+        
+        // Evita pull-to-refresh e o scroll padrão enquanto o usuário arrasta
+        document.addEventListener('touchmove', function(e) {}, {passive: false});
+      });
+    </script>
+    
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23003459%22/><text y=%22.75em%22 x=%225%22 font-size=%2280%22>⭐</text></svg>">
     <title>Sky Distribuidora Manager</title>

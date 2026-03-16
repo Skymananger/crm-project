@@ -240,7 +240,7 @@ const CustomerPipeline: React.FC<CustomerPipelineProps> = ({ type }) => {
   };
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
-    e.dataTransfer.setData("leadId", id);
+    e.dataTransfer.setData("text/plain", id);
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -248,7 +248,7 @@ const CustomerPipeline: React.FC<CustomerPipelineProps> = ({ type }) => {
 
   const handleDrop = (e: React.DragEvent, stage: string) => {
     e.preventDefault();
-    const leadId = e.dataTransfer.getData("leadId");
+    const leadId = e.dataTransfer.getData("text/plain");
     if (leadId) updateLeadStage(leadId, stage);
   };
 
